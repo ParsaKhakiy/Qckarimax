@@ -1,0 +1,2 @@
+# Payment Django app
+
