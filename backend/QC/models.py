@@ -51,7 +51,7 @@ class QualityControlExpert(models.Model):
         verbose_name="تخصص ویژه"
     )
     
-    inspected_products_count = models.PositiveIntegerField(
+    inspected_products_count = models.PositiveIntegerField( # 
         default=0,
         verbose_name="تعداد محصولات بازرسی شده"
     )
@@ -92,7 +92,9 @@ class QualityControlExpert(models.Model):
 
 
 
-class QCHistoryCreator(models.Model):
+
+
+class QCHistoryCreator(models.Model): 
     """مدل برای ثبت تاریخچه بازرسی‌های QC"""
     
     qc_expert = models.OneToOneField(
@@ -115,7 +117,12 @@ class QCHistoryCreator(models.Model):
         verbose_name="لاگ‌های بازرسی",
         blank=True
     )
-    
+    inspected_cart = models.ManyToManyField(
+        'ProductionCard'  , 
+        related_name='inspected_cart_p_cart'
+    )
+
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="تاریخ ایجاد"
@@ -127,6 +134,10 @@ class QCHistoryCreator(models.Model):
     
     def __str__(self):
         return f"تاریخچه بازرسی‌های {self.qc_expert.user.get_full_name()}"
+
+
+
+
 
 
 
@@ -149,7 +160,7 @@ class InspectionLog(models.Model):
         verbose_name="بازرس"
     )
     
-    order = models.ForeignKey(
+    order = models.ForeignKey( # one to one 
         'order.Order',
         on_delete=models.CASCADE,
         related_name='qc_logs',
@@ -201,61 +212,12 @@ class InspectionLog(models.Model):
 
 
 
-class QCStandard(models.Model):
-    """مدل برای استانداردهای کنترل کیفیت"""
-    
-    name = models.CharField(
-        max_length=200,
-        verbose_name="نام استاندارد"
-    )
-    
-    code = models.CharField(
-        max_length=50,
-        unique=True,
-        verbose_name="کد استاندارد"
-    )
-    
-    description = models.TextField(
-        verbose_name="توضیحات استاندارد"
-    )
-    
-    category = models.CharField(
-        max_length=100,
-        verbose_name="دسته‌بندی"
-    )
-    
-    is_active = models.BooleanField(
-        default=True,
-        verbose_name="فعال"
-    )
-    
-    created_by = models.ForeignKey(
-        QualityControlExpert,
-        on_delete=models.SET_NULL,
-        null=True,
-        verbose_name="ایجاد شده توسط"
-    )
-    
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="تاریخ ایجاد"
-    )
-    
-    updated_at = models.DateTimeField(
-        auto_now=True,
-        verbose_name="آخرین بروزرسانی"
-    )
-    
-    class Meta:
-        verbose_name = "استاندارد QC"
-        verbose_name_plural = "استانداردهای QC"
-        ordering = ['category', 'name']
-    
-    def __str__(self):
-        return f"{self.code} - {self.name}"
-    
-#########
 
+
+
+
+
+#### cart 
 
 class ProductionCard(models.Model):
     """مدل کارت تولید برای هر محصول"""
@@ -469,225 +431,294 @@ class ProductionCard(models.Model):
     def __str__(self):
         return f"{self.card_code} - {self.title}"
     
-    def save(self, *args, **kwargs):
-        # ایجاد کد کارت تولید به صورت خودکار اگر وجود ندارد
-        if not self.card_code:
-            product_name = self.requirements_product.product.name[:3].upper()
-            date_part = timezone.now().strftime("%y%m%d")
-            random_part = str(random.randint(100, 999))
-            self.card_code = f"PC-{product_name}-{date_part}-{random_part}"
-        
-        super().save(*args, **kwargs)
-    
-    @property
-    def product(self):
-        """دسترسی آسان به محصول مرتبط"""
-        return self.requirements_product.product
-    
-    @property
-    def requirements_list(self):
-        """لیست الزامات مرتبط"""
-        return self.requirements_product.requirements.all()
-    
-    @property
-    def is_on_schedule(self):
-        """بررسی آیا تولید در زمان برنامه‌ریزی شده است"""
-        if not self.actual_start_date or not self.scheduled_start_date:
-            return None
-        
-        time_diff = self.actual_start_date - self.scheduled_start_date
-        return abs(time_diff.total_seconds()) < 3600  # تفاوت کمتر از 1 ساعت
-    
-    @property
-    def production_duration(self):
-        """محاسبه مدت زمان تولید"""
-        if self.actual_start_date and self.actual_end_date:
-            return self.actual_end_date - self.actual_start_date
-        return None
-    
-    def update_progress(self, new_progress):
-        """به‌روزرسانی درصد پیشرفت"""
-        if 0 <= new_progress <= 100:
-            self.current_progress = new_progress
-            self.save()
-    
-    def assign_operator(self, operator):
-        """اختصاص اپراتور به کارت تولید"""
-        self.assigned_operators.add(operator)
-    
-    def add_production_step(self, step_name, description, duration, tools=None):
-        """افزودن مرحله تولید"""
-        step = {
-            'name': step_name,
-            'description': description,
-            'duration': str(duration),
-            'tools': tools or [],
-            'added_at': timezone.now().isoformat(),
-            'completed': False,
-            'completed_at': None
-        }
-        self.production_steps.append(step)
-        self.save()
-    
-    def complete_step(self, step_index, notes=None):
-        """تکمیل یک مرحله تولید"""
-        if step_index < len(self.production_steps):
-            self.production_steps[step_index]['completed'] = True
-            self.production_steps[step_index]['completed_at'] = timezone.now().isoformat()
-            if notes:
-                self.production_steps[step_index]['notes'] = notes
-            self.save()
-    
-    def add_quality_checkpoint(self, checkpoint_name, standard, required_action):
-        """افزودن نقطه کنترل کیفیت"""
-        checkpoint = {
-            'name': checkpoint_name,
-            'standard': standard,
-            'required_action': required_action,
-            'checked': False,
-            'checked_by': None,
-            'checked_at': None,
-            'result': None
-        }
-        self.quality_checkpoints.append(checkpoint)
-        self.save()
 
 
-class ProductionCardLog(models.Model):
-    """مدل برای ثبت لاگ تغییرات کارت تولید"""
+
+
+
+
+class ProductionCardQCInspection(models.Model):
+    """مدل بازرسی QC برای کارت تولید"""
     
-    LOG_TYPES = (
-        ('status_change', 'تغییر وضعیت'),
-        ('progress_update', 'به‌روزرسانی پیشرفت'),
-        ('operator_assignment', 'اختصاص اپراتور'),
-        ('material_usage', 'مصرف مواد'),
-        ('quality_check', 'کنترل کیفیت'),
-        ('note_added', 'افزودن یادداشت'),
-        ('file_uploaded', 'آپلود فایل'),
-        ('time_adjustment', 'تغییر زمان'),
+    INSPECTION_STATUS = (
+        ('pending', 'در انتظار بازرسی'),
+        ('in_progress', 'در حال بازرسی'),
+        ('approved', 'تأیید شده'),
+        ('rejected', 'رد شده'),
+        ('needs_correction', 'نیاز به اصلاح'),
+        ('re_inspection', 'بازرسی مجدد'),
     )
     
+    INSPECTION_TYPE = (
+        ('initial', 'بازرسی اولیه'),
+        ('in_process', 'بازرسی حین تولید'),
+        ('final', 'بازرسی نهایی'),
+        ('random', 'بازرسی تصادفی'),
+        ('special', 'بازرسی ویژه'),
+    )
+    
+    # ارتباط با کارت تولید
     production_card = models.ForeignKey(
         'ProductionCard',
         on_delete=models.CASCADE,
-        related_name='logs',
+        related_name='qc_inspections',
         verbose_name="کارت تولید"
     )
     
-    log_type = models.CharField(
-        max_length=20,
-        choices=LOG_TYPES,
-        verbose_name="نوع رویداد"
-    )
-    
-    description = models.TextField(
-        verbose_name="توضیحات رویداد"
-    )
-    
-    old_value = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="مقدار قبلی"
-    )
-    
-    new_value = models.TextField(
-        blank=True,
-        null=True,
-        verbose_name="مقدار جدید"
-    )
-    
-    performed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    # بازرس QC
+    inspector = models.ForeignKey(
+        QualityControlExpert,
         on_delete=models.SET_NULL,
         null=True,
-        verbose_name="انجام شده توسط"
+        related_name='card_inspections',
+        verbose_name="بازرس QC"
     )
     
-    performed_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name="زمان انجام"
+    # اطلاعات بازرسی
+    inspection_code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="کد بازرسی"
     )
     
-    metadata = models.JSONField(
-        default=dict,
+    inspection_type = models.CharField(
+        max_length=20,
+        choices=INSPECTION_TYPE,
+        default='in_process',
+        verbose_name="نوع بازرسی"
+    )
+    
+    status = models.CharField(
+        max_length=20,
+        choices=INSPECTION_STATUS,
+        default='pending',
+        verbose_name="وضعیت بازرسی"
+    )
+    
+    # زمان‌بندی
+    scheduled_date = models.DateTimeField(
+        null=True,
         blank=True,
-        verbose_name="اطلاعات اضافی"
+        verbose_name="زمان برنامه‌ریزی شده بازرسی"
+    )
+    
+    actual_start_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="زمان شروع واقعی"
+    )
+    
+    actual_end_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="زمان پایان واقعی"
+    )
+    
+    # نتایج بازرسی
+    overall_score = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="امتیاز کلی",
+        validators=[MinValueValidator(0), MaxValueValidator(100)]
+    )
+    
+    passed_items = models.PositiveIntegerField(
+        default=0,
+        verbose_name="تعداد موارد تأیید شده"
+    )
+    
+    failed_items = models.PositiveIntegerField(
+        default=0,
+        verbose_name="تعداد موارد رد شده"
+    )
+    
+    total_items_checked = models.PositiveIntegerField(
+        default=0,
+        verbose_name="تعداد کل موارد بررسی شده"
+    )
+    
+    # جزئیات بازرسی
+    checklist_items = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="اقلام چک لیست"
+    )
+    
+    test_results = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="نتایج آزمون‌ها"
+    )
+    
+    measurements = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="اندازه‌گیری‌ها"
+    )
+    
+
+    # مستندات
+    inspection_report = models.FileField(
+        upload_to='qc_reports/production_cards/',
+        null=True,
+        blank=True,
+        verbose_name="گزارش بازرسی"
+    )
+    
+    photos = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name="عکس‌های بازرسی"
+    )
+    
+    # نظرات و توضیحات
+    inspector_comments = models.TextField(
+        blank=True,
+        verbose_name="نظرات بازرس"
+    )
+    
+    rejection_reason = models.TextField(
+        blank=True,
+        verbose_name="دلیل رد (در صورت وجود)"
+    )
+    
+    correction_instructions = models.TextField(
+        blank=True,
+        verbose_name="دستورالعمل‌های اصلاح"
+    )
+    
+    # تأییدیه‌ها
+    approved_by_qc_manager = models.ForeignKey(
+        QualityControlExpert,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_card_inspections',
+        verbose_name="تأیید شده توسط مدیر QC"
+    )
+    
+    # پیگیری اصلاحات
+    needs_correction = models.BooleanField(
+        default=False,
+        verbose_name="نیاز به اصلاح دارد"
+    )
+    
+    corrected = models.BooleanField(
+        default=False,
+        verbose_name="اصلاح شده"
+    )
+    
+    correction_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="تاریخ اصلاح"
+    )
+    
+    # متادیتا
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="تاریخ ایجاد"
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name="آخرین بروزرسانی"
     )
     
     class Meta:
-        verbose_name = "لاگ کارت تولید"
-        verbose_name_plural = "لاگ‌های کارت تولید"
-        ordering = ['-performed_at']
+        verbose_name = "بازرسی کارت تولید"
+        verbose_name_plural = "بازرسی‌های کارت تولید"
+        ordering = ['-scheduled_date']
         indexes = [
-            models.Index(fields=['production_card', 'performed_at']),
-            models.Index(fields=['log_type']),
+            models.Index(fields=['inspection_code']),
+            models.Index(fields=['status']),
+            models.Index(fields=['production_card', 'status']),
         ]
     
     def __str__(self):
-        return f"لاگ {self.log_type} برای کارت {self.production_card.card_code}"
+        return f"بازرسی {self.inspection_code} - کارت {self.production_card.card_code}"
+    
 
 
-class MaterialConsumption(models.Model):
-    """مدل برای پیگیری مصرف مواد اولیه در هر کارت تولید"""
     
-    production_card = models.ForeignKey(
-        'ProductionCard',
-        on_delete=models.CASCADE,
-        related_name='material_consumptions',
-        verbose_name="کارت تولید"
-    )
+    def save(self, *args, **kwargs):
+        # ایجاد کد بازرسی به صورت خودکار
+        if not self.inspection_code:
+            card_code = self.production_card.card_code[:5]
+            date_part = timezone.now().strftime("%y%m%d%H%M")
+            self.inspection_code = f"QC-{card_code}-{date_part}"
+        
+        # محاسبه تعداد کل موارد بررسی شده
+        self.total_items_checked = self.passed_items + self.failed_items
+        
+        # محاسبه امتیاز کلی اگر مواردی بررسی شده باشد
+        if self.total_items_checked > 0:
+            self.overall_score = (self.passed_items / self.total_items_checked) * 100
+        
+        super().save(*args, **kwargs)
     
-    material_name = models.CharField(
-        max_length=200,
-        verbose_name="نام ماده اولیه"
-    )
+    def add_checklist_item(self, item_name, standard_value, actual_value, passed):
+        """افزودن مورد به چک لیست"""
+        item = {
+            'id': len(self.checklist_items) + 1,
+            'item_name': item_name,
+            'standard_value': standard_value,
+            'actual_value': actual_value,
+            'passed': passed,
+            'checked_at': timezone.now().isoformat(),
+            'notes': ''
+        }
+        self.checklist_items.append(item)
+        
+        # به‌روزرسانی آمار
+        if passed:
+            self.passed_items += 1
+        else:
+            self.failed_items += 1
+        
+        self.save()
     
-    material_code = models.CharField(
-        max_length=50,
-        verbose_name="کد ماده"
-    )
+
+    def add_test_result(self, test_name, method, result, unit, passed):
+        """افزودن نتیجه آزمون"""
+        test = {
+            'test_name': test_name,
+            'method': method,
+            'result': result,
+            'unit': unit,
+            'passed': passed,
+            'tested_at': timezone.now().isoformat(),
+            'operator': None
+        }
+        self.test_results.append(test)
+        self.save()
     
-    unit = models.CharField(
-        max_length=20,
-        verbose_name="واحد اندازه‌گیری"
-    )
+    def approve_inspection(self, qc_manager, comments=""):
+        """تأیید بازرسی توسط مدیر QC"""
+        if self.status == 'approved':
+            return
+        
+        self.status = 'approved'
+        self.approved_by_qc_manager = qc_manager
+        self.inspector_comments = comments
+        self.save()
+        
+        # به‌روزرسانی وضعیت کارت تولید اگر بازرسی نهایی باشد
+        if self.inspection_type == 'final' and self.status == 'approved':
+            self.production_card.status = 'completed'
+            self.production_card.approved_by_qa = self.inspector
+            self.production_card.approval_date = timezone.now()
+            self.production_card.save()
     
-    estimated_quantity = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        verbose_name="مقدار تخمینی"
-    )
-    
-    actual_quantity = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="مقدار مصرف واقعی"
-    )
-    
-    consumption_date = models.DateTimeField(
-        null=True,
-        blank=True,
-        verbose_name="تاریخ مصرف"
-    )
-    
-    consumed_by = models.ForeignKey(
-        'product.Operator',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name="مصرف شده توسط"
-    )
-    
-    notes = models.TextField(
-        blank=True,
-        verbose_name="یادداشت‌ها"
-    )
-    
-    class Meta:
-        verbose_name = "مصرف مواد اولیه"
-        verbose_name_plural = "مصرف مواد اولیه"
-    
-    def __str__(self):
-        return f"{self.material_name} - کارت {self.production_card.card_code}"
+    def reject_inspection(self, reason, needs_correction=True):
+        """رد بازرسی"""
+        self.status = 'rejected'
+        self.rejection_reason = reason
+        self.needs_correction = needs_correction
+        self.save()
+        
+        # به‌روزرسانی وضعیت کارت تولید
+        self.production_card.status = 'paused'
+        self.production_card.save()
