@@ -22,6 +22,13 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
+local_apps = [
+    'order',
+    'product',
+    'Sales',
+    'Account',
+    
+]
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -38,7 +45,13 @@ INSTALLED_APPS = [
     
     # Local apps
     'payment',
+    
+
+
+    *local_apps
+    
 ]
+SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
