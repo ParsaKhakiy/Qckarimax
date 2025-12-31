@@ -27,6 +27,7 @@ local_apps = [
     'product',
     'Sales',
     'Account',
+    'QC',
     
 ]
 # Application definition
@@ -43,9 +44,10 @@ INSTALLED_APPS = [
     'drf_yasg',  # Swagger/OpenAPI
     'corsheaders',
     'django_filters' , 
-    
+
     # Local apps
     'payment',
+    
     
 
 

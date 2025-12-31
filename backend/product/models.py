@@ -142,3 +142,7 @@ class RequirementsProducts(AbstractNameDescription):
     orpertors = models.ManyToManyField(Operator)
 
     
+
+
+
+    
