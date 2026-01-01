@@ -25,6 +25,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('payment.api.urls')),
     path('product/' ,include('product.urls') ),
+    path('QC/' ,include('QC.urls') ),
+    path('repost/' ,include('report.urls') ),
+
     path('salles-api/',include('Sales.urls')),
     
     # Swagger/OpenAPI documentation

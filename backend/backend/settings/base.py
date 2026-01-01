@@ -28,6 +28,7 @@ local_apps = [
     'Sales',
     'Account',
     'QC',
+    'report',
     
 ]
 # Application definition

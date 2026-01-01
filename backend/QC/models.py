@@ -217,8 +217,7 @@ class InspectionLog(models.Model):
 
 
 
-#### cart 
-
+# Cart from products 
 class ProductionCard(models.Model):
     """مدل کارت تولید برای هر محصول"""
     
@@ -364,14 +363,13 @@ class ProductionCard(models.Model):
     )
     
 
-    approved_by_qa = models.ForeignKey( # must related to the qc 
+    approved_by_qa = models.ManyToManyField( 
         QualityControlExpert,
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
         related_name='qa_approved_production_cards',
         verbose_name="تأیید شده توسط کنترل کیفیت"
     )
+    # check that Qc Can provide this sections 
     
     approval_date = models.DateTimeField(
         null=True,
@@ -398,9 +396,9 @@ class ProductionCard(models.Model):
         default=True,
         verbose_name="فعال"
     )
-    
+    # create by qc controller 
     created_by = models.ForeignKey(
-        QualityControlExpert,
+        settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         related_name='created_production_cards',
@@ -437,7 +435,9 @@ class ProductionCard(models.Model):
 
 
 
-class ProductionCardQCInspection(models.Model):
+class ProductionCardQCInspection(
+    models.Model
+    ):
     """مدل بازرسی QC برای کارت تولید"""
     
     INSPECTION_STATUS = (
@@ -466,7 +466,7 @@ class ProductionCardQCInspection(models.Model):
     )
     
     # بازرس QC
-    inspector = models.ForeignKey(
+    inspector = models.OneToOneField(
         QualityControlExpert,
         on_delete=models.SET_NULL,
         null=True,

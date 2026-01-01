@@ -16,11 +16,18 @@ from .serializers import (
 )
 from backend.utils.apis import BaseCRUDViewSet
 
+from .permissions import IsQualityControlExpert
+
+
 class ProductionCardViewSet(BaseCRUDViewSet):
+
+
+    permission_classes = [IsQualityControlExpert]
+
     input_serializer_class = ProductionCardInputSerializer
     output_serializer_class = ProductionCardOutputSerializer
     
-    queryset = ProductionCard.objects.select_related(
+    queryset = ProductionCard.objects.select_related( 
         'requirements_product__product__category',
         'created_by__user',
         'approved_by_qa__user',
@@ -98,10 +105,16 @@ class ProductionCardViewSet(BaseCRUDViewSet):
         
         return queryset
     
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser() | permissions.IsAuthenticated()]
-        return [permissions.IsAuthenticated()]
+    # def get_serializer_context(self):
+    #     context =  super().get_serializer_context()
+    #     context['request'] = self.request 
+    #     return context
+    
+    
+    # def get_permissions(self):
+    #     if self.action in ['create', 'update', 'partial_update', 'destroy']:
+    #         return [permissions.IsAdminUser() | permissions.IsAuthenticated()]
+    #     return [permissions.IsAuthenticated()]
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -113,13 +126,14 @@ class ProductionCardViewSet(BaseCRUDViewSet):
         request = self.context.get('request')
         if request and request.user:
             try:
-                from .models import QualityControlExpert
-                qc_expert = QualityControlExpert.objects.get(user=request.user)
-                serializer.save(created_by=qc_expert)
-            except QualityControlExpert.DoesNotExist:
+                serializer.save(created_by=request.user)
+            except:
                 serializer.save()
         else:
             serializer.save()
+
+
+
     
     @action(detail=False, methods=['get'], url_path='stats')
     def production_stats(self, request):
@@ -158,6 +172,7 @@ class ProductionCardViewSet(BaseCRUDViewSet):
             'cards_by_priority': list(by_priority),
         })
     
+
     @action(detail=False, methods=['get'], url_path='overdue')
     def overdue_cards(self, request):
         """لیست کارت‌های تأخیری"""
@@ -337,3 +352,4 @@ class ProductionCardViewSet(BaseCRUDViewSet):
                 {'error': 'کارت تولید با این کد یافت نشد'},
                 status=status.HTTP_404_NOT_FOUND
             )
+        

@@ -117,9 +117,8 @@ class ProductionCardInputSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user and 'created_by' not in validated_data:
             try:
-                qc_expert = QualityControlExpert.objects.get(user=request.user)
-                validated_data['created_by'] = qc_expert
-            except QualityControlExpert.DoesNotExist:
+                validated_data['created_by'] = request.user
+            except:
                 pass
         
         # تنظیم وضعیت اولیه
