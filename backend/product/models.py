@@ -4,6 +4,7 @@ from django.core.validators import MinValueValidator
 from django.utils.text import slugify
 
 from order.models import Order
+from django.conf import settings 
 
 class AbstractNameDescription(models.Model):
     name = models.CharField(max_length=255, db_index=True)
@@ -31,6 +32,12 @@ class Category(models.Model):
         return self.title
 
 class Product(AbstractNameDescription):
+    user = models.ForeignKey( # TODO must change 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank= True , 
+    )
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
     description = models.TextField(blank=True)
     

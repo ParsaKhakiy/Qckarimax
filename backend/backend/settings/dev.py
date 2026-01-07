@@ -27,3 +27,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Posted by Milad Hatami, modified by community. See post 'Timeline' for change history
 # Retrieved 2025-11-26, License - CC BY-SA 4.0
 BASE_URL_SWAGGER = '/'
+
+
+

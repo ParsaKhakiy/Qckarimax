@@ -13,3 +13,6 @@ class TestProduct(BaseCRUDViewSet):
     queryset = Product.objects.all()
     input_serializer_class = TestproductSeraizlier
     output_serializer_class = TestproductSeraizlier 
+
+
+

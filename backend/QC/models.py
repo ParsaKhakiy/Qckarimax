@@ -25,6 +25,7 @@ class QualityControlExpert(models.Model):
         verbose_name="کد پرسنلی"
     )
     
+    
     department = models.CharField(
         max_length=100, 
         verbose_name="بخش/واحد کنترل کیفیت"

@@ -9,7 +9,7 @@ from order.serializers import OrderInputSerializer, OrderOutputSerializer
 
 from .models import OrderHistoryCreator
 from .permissions import IsSalesExpert
-
+from .serializers import SalesExpertStatisticsSerializer
 
 # --- Logic Layer ---
 def create_order_history(order, seller):
@@ -70,3 +70,46 @@ class OrderBySellerApiView(APIView):
 
         data = OrderOutputSerializer(orders, many=True).data
         return Response(data, status=status.HTTP_200_OK)
+
+
+class DashbordApiView(APIView):
+    permission_classes = [IsSalesExpert]
+     
+    OutputSerializer = SalesExpertStatisticsSerializer 
+
+    @swagger_auto_schema(
+        operation_summary="پروفایل محصول خرید",
+        responses={
+            200: SalesExpertStatisticsSerializer(),
+            400: "خطا در پردازش داده‌ها",
+            403: "عدم دسترسی کارشناس",
+        },
+    )
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        try:
+            serializer = SalesExpertStatisticsSerializer(
+                request.sales_profile
+            )
+            
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+# views/order.py
+from rest_framework import generics, permissions
+from rest_framework.response import Response
+from order.models import Order
+from order.serializers import OrderOutputSerializer
+from .permissions import IsSalesExpert
+
+class OrderDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Order.objects.all()
+    serializer_class = OrderOutputSerializer
+    permission_classes = [IsSalesExpert]
+    
+    def get_queryset(self):
+        # فقط سفارش‌های خود کارشناس
+        return Order.objects.filter(saler=self.request.sales_profile)

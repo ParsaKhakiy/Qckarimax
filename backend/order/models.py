@@ -1,5 +1,6 @@
 from django.db import models
 
+from django.conf import settings
 
 class Order(models.Model):
     STATUS_CHOICES = (
@@ -27,7 +28,12 @@ class Order(models.Model):
     # فیلد برای کد رهگیری بانکی یا پستی
     tracking_code = models.CharField(max_length=100, blank=True, null=True)
     product = models.ForeignKey('product.Product', on_delete=models.PROTECT, related_name='order_items')
-
+    user = models.ForeignKey( # TODO must change 
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank= True , 
+    )
     class Meta:
         ordering = ['-created_at']
 

@@ -29,6 +29,7 @@ local_apps = [
     'Account',
     'QC',
     'report',
+    'authentication',
     
 ]
 # Application definition
@@ -43,29 +44,25 @@ INSTALLED_APPS = [
     # Third party
     'rest_framework',
     'drf_yasg',  # Swagger/OpenAPI
-    'corsheaders',
-    'django_filters' , 
-
+    'corsheaders',  # فقط یک بار
+    'django_filters',
+    'rest_framework_simplejwt',
     # Local apps
     'payment',
-    
-    
-
-
     *local_apps
-    
 ]
 SITE_ID = 1
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # باید قبل از CommonMiddleware باشد
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend.settings.middlewares.JwtSessionMiddleware'
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -138,21 +135,21 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework Configuration
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # Adjust based on your needs
-    ],
-    'EXCEPTION_HANDLER': 'payment.api.exceptions.custom_exception_handler',
-}
+# # REST Framework Configuration
+# REST_FRAMEWORK = {
+#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+#     'PAGE_SIZE': 20,
+#     'DEFAULT_RENDERER_CLASSES': [
+#         'rest_framework.renderers.JSONRenderer',
+#     ],
+#     'DEFAULT_PARSER_CLASSES': [
+#         'rest_framework.parsers.JSONParser',
+#     ],
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.permissions.AllowAny',
+#     ],
+#     'EXCEPTION_HANDLER': 'payment.api.exceptions.custom_exception_handler',
+# }
 
 # Redis Configuration
 REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
@@ -188,54 +185,182 @@ PAYMENT_SETTINGS = {
 }
 
 # Transaction Cache TTL (in seconds)
-TRANSACTION_CACHE_TTL = int(os.getenv('TRANSACTION_CACHE_TTL', 900))  # 15 minutes
-IDEMPOTENCY_CACHE_TTL = int(os.getenv('IDEMPOTENCY_CACHE_TTL', 3600))  # 1 hour
+TRANSACTION_CACHE_TTL = int(os.getenv('TRANSACTION_CACHE_TTL', 900))
+IDEMPOTENCY_CACHE_TTL = int(os.getenv('IDEMPOTENCY_CACHE_TTL', 3600))
 
 # Logging Configuration
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-        'file': {
-            'class': 'logging.FileHandler',
-            'filename': LOG_DIR / 'mohadam.log',
-            'formatter': 'verbose',
-        },
-    },
+# LOGGING = {
+#     'version': 1,
+#     'disable_existing_loggers': False,
+#     'formatters': {
+#         'verbose': {
+#             'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+#             'style': '{',
+#         },
+#         'simple': {
+#             'format': '{levelname} {message}',
+#             'style': '{',
+#         },
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'formatter': 'verbose',
+#         },
+#         'file': {
+#             'class': 'logging.FileHandler',
+#             'filename': LOG_DIR / 'mohadam.log',
+#             'formatter': 'verbose',
+#         },
+#     },
+#     'root': {
+#         'handlers': ['console', 'file'],
+#         'level': 'INFO',
+#     },
+#     'loggers': {
+#         'payment': {
+#             'handlers': ['console', 'file'],
+#             'level': 'DEBUG',
+#             'propagate': False,
+#         },
+#         'django': {
+#             'handlers': ['console'],
+#             'level': 'INFO',
+#         },
+#     },
+# }
 
-    'root': {
-        'handlers': ['console', 'file'],
-        'level': 'INFO',
-    },
+# ==================== CORS SETTINGS ====================
+# راه حل 1: اجازه دادن به همه درخواست‌ها (برای توسعه)
+CORS_ALLOW_ALL_ORIGINS = True  # فقط برای محیط توسعه
 
-    'loggers': {
-        'payment': {
-            'handlers': ['console', 'file'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-        },
-    },
-}
+# یا راه حل 2: تنظیم دامنه‌های خاص
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:3000",
+#     "http://127.0.0.1:3000",
+#     "http://localhost:8000",
+#     "http://127.0.0.1:8000",
+# ]
 
-# CORS Settings
-CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+# اجازه دادن به کوکی‌ها و اعتبارنامه‌ها
 CORS_ALLOW_CREDENTIALS = True
 
+# متدهای مجاز
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# هدرهای مجاز
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-requested-with',
+]
+
+# اگر نمی‌خواهید درخواست OPTIONS ارسال شود (راه حل جایگزین):
+# اضافه کردن این هدرها برای جلوگیری از preflight
+CORS_PREFLIGHT_MAX_AGE = 86400  # کش کردن preflight برای 24 ساعت
+
+# ==================== CSRF SETTINGS ====================
+# غیرفعال کردن CSRF برای API (اگر از JWT یا توکن استفاده می‌کنید)
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:80",
+]
+
+# اگر از session authentication استفاده نمی‌کنید، CSRF را غیرفعال کنید
+# CSRF_COOKIE_SECURE = False
+# CSRF_COOKIE_HTTPONLY = False.
+
+
+
+# REST_FRAMEWORK = {
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JWTAuthentication',
+#     ),
+# #     'DEFAULT_PERMISSION_CLASSES': (
+# #         'rest_framework.permissions.IsAuthenticated',
+# #     ),
+# }
+
+DEBUG = True
+if DEBUG:
+    
+    #SWAGGER_SETTINGS = {
+    #    'USE_SESSION_AUTH': False,  # این رو False کن
+    #    'SECURITY_DEFINITIONS': None,
+    #}
+    # محیط توسعه: فرانت لوکال، بک‌اند روی سرور
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+
+    SESSION_COOKIE_SAMESITE = 'None'
+    CSRF_COOKIE_SAMESITE = 'None'
+
+    # اصلاح شد: برای SameSite=None حتما باید True باشند
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    CORS_ALLOW_CREDENTIALS = True
+
+    CSRF_TRUSTED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",  # آدرس جنگو
+
+    ]
+     
+
+
+else:
+    # پروداکشن
+    CORS_ALLOW_ALL_ORIGINS = False
+    CORS_ALLOWED_ORIGINS = [
+        "https://karimax.ir",
+        "https://www.karimax.ir",
+        # دامنه نهایی فرانت‌اندت
+    ]
+
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+
+    CSRF_TRUSTED_ORIGINS = [
+        "https://karimax.ir",
+        "https://www.karimax.ir",
+    ]
+
+CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOW_ALL_ORIGINS = False
+#
+# CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_CREDENTIALS = True
+
+
+# در settings.py
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 10,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+}

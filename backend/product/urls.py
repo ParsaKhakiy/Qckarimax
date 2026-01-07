@@ -21,5 +21,5 @@ router.register(r'production-tasks', ProductionTaskViewSet, basename='production
 router.register(r'requirements-products', RequirementsProductsViewSet, basename='requirements-products')
 
 urlpatterns = [
-    path('product/', include(router.urls)),
+    path('', include(router.urls)),
 ]

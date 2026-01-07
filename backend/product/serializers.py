@@ -65,17 +65,19 @@ class ProductInputSerializer(serializers.ModelSerializer):
             'slug': {'required': False}
         }
 
-    def create(self, validated_data):
-        if 'slug' not in validated_data or not validated_data['slug']:
-            validated_data['slug'] = slugify(validated_data['name'], allow_unicode=True)
-        return super().create(validated_data)
+
 
     def update(self, instance, validated_data):
         if 'name' in validated_data and ('slug' not in validated_data or not validated_data['slug']):
             validated_data['slug'] = slugify(validated_data['name'], allow_unicode=True)
         return super().update(instance, validated_data)
 
-
+    # در ProductInputSerializer
+    def create(self, validated_data):
+        if 'slug' not in validated_data or not validated_data['slug']:
+            validated_data['slug'] = slugify(validated_data['name'], allow_unicode=True)
+        validated_data['user'] = self.context['request'].user  # اضافه شدن user
+        return super().create(validated_data)
 class ProductOutputSerializer(serializers.ModelSerializer):
     category = CategoryOutputSerializer(read_only=True)
     category_id = serializers.IntegerField(source='category.id', read_only=True)

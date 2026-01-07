@@ -72,14 +72,15 @@ class ProductViewSet(BaseCRUDViewSet):
     
     queryset = Product.objects.select_related('category').filter(is_active=True)
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    
     filterset_fields = ['category', 'is_active', 'stock']
     search_fields = ['name', 'description', 'slug']
     ordering_fields = ['name', 'price', 'created_at', 'stock']
     
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAdminUser()]
-        return [permissions.IsAuthenticatedOrReadOnly()]
+    # def get_permissions(self):
+    #     if self.action in ['create', 'update', 'partial_update', 'destroy']:
+    #         return [permissions.IsAdminUser()]
+    #     return [permissions.IsAuthenticatedOrReadOnly()]
     
     @action(detail=False, methods=['get'], url_path='out-of-stock')
     def out_of_stock(self, request):

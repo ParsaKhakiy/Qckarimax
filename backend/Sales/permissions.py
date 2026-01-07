@@ -7,6 +7,7 @@ class IsSalesExpert(BasePermission):
     def has_permission(self, request, view):
         # TODO add middle ware for this section
         if not request.user or not request.user.is_authenticated:
+            print("HEEYYY" , request.user)
             return False
         try:
             sales_profile = SalesExpert.objects.select_related('user').get(user=request.user)

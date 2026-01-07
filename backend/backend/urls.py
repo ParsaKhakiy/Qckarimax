@@ -3,10 +3,13 @@ URL configuration for backend project.
 """
 from django.conf import settings
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include 
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
+
+
+
 
 schema_view = get_schema_view(
    openapi.Info(
@@ -20,9 +23,10 @@ schema_view = get_schema_view(
    public=True,
    permission_classes=[permissions.AllowAny],
 )
-
+from django.http import HttpResponse , HttpRequest
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('auth/',include('authentication.urls')),
     path('api/v1/', include('payment.api.urls')),
     path('product/' ,include('product.urls') ),
     path('QC/' ,include('QC.urls') ),
@@ -35,6 +39,8 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('swagger.json', schema_view.without_ui(cache_timeout=0), name='schema-json'),
 
+    path('test-session/' , lambda request  : HttpResponse(f"response is {request.session.get('access')}")) ,
+    path('order/',include('order.urls'))
 ]
 
 # Source - https://stackoverflow.com/q
@@ -47,3 +53,5 @@ if settings.DEBUG:
         urlpatterns += [path(r'^__debug__/', include(debug_toolbar.urls))]
     except ImportError:
         pass
+
+
